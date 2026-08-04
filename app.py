@@ -78,3 +78,9 @@ with tabs[4]:
     if metric == "Number of orders":
         data = g.size().reset_index(name="value")
     elif metric == "Total revenue":
+        data = g["payment_total"].sum().reset_index(name="value")
+    else:
+        data = g["payment_total"].mean().reset_index(name="value")
+    data = data.sort_values("value", ascending=False)
+    st.plotly_chart(px.bar(data, x="customer_state", y="value",
+                    labels={"customer_state": "State", "value": metric}), key="geo1")
