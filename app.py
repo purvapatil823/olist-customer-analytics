@@ -11,6 +11,8 @@ seg = pd.read_csv("dashboard_seg.csv")
 risk = pd.read_csv("dashboard_risk.csv")
 preds = pd.read_csv("dashboard_predictions.csv")
 
+name_col = "segment_name" if "segment_name" in risk.columns else risk.columns[0]
+
 tabs = st.tabs(["Executive Summary", "Segments", "Delivery & Risk",
                 "Risk Flagging Tool", "Geography"])
 
@@ -24,17 +26,17 @@ with tabs[0]:
     left, right = st.columns(2)
     with left:
         st.subheader("Revenue Share by Segment")
-        rc = risk.reset_index()
-        name_col = rc.columns[0]
-        val_col = "revenue_share_pct" if "revenue_share_pct" in rc.columns else rc.columns[-1]
-        st.plotly_chart(px.pie(rc, names=name_col, values=val_col, hole=0.4), key="pie1")
+        val_col = "revenue_share_pct" if "revenue_share_pct" in risk.columns else risk.columns[-1]
+        st.plotly_chart(px.pie(risk, names=name_col, values=val_col, hole=0.4), key="pie1")
     with right:
         st.subheader("Satisfaction by Delivery Outcome")
         d = (seg.dropna(subset=["late_delivery"]).groupby("late_delivery")["satisfied"].mean()*100).reset_index()
         d["Outcome"] = d["late_delivery"].map({0.0: "On time", 1.0: "Late"})
-        st.plotly_chart(px.bar(d, x="Outcome", y="satisfied", color="Outcome",
-                        color_discrete_map={"On time": "#4c72b0", "Late": "#c44e52"},
-                        labels={"satisfied": "Satisfaction %"}), key="bar_deliv")
+        fig = px.bar(d, x="Outcome", y="satisfied", color="Outcome",
+                     color_discrete_map={"On time": "#4c72b0", "Late": "#c44e52"},
+                     labels={"satisfied": "Satisfaction %"})
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig, key="bar_deliv")
 
     st.subheader("Order Value Distribution")
     max_v = st.slider("Show orders up to (BRL)", 50, 1000, 500, 50)
@@ -76,9 +78,3 @@ with tabs[4]:
     if metric == "Number of orders":
         data = g.size().reset_index(name="value")
     elif metric == "Total revenue":
-        data = g["payment_total"].sum().reset_index(name="value")
-    else:
-        data = g["payment_total"].mean().reset_index(name="value")
-    data = data.sort_values("value", ascending=False)
-    st.plotly_chart(px.bar(data, x="customer_state", y="value",
-                    labels={"customer_state": "State", "value": metric}), key="geo1")
